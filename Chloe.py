@@ -26,16 +26,19 @@ import plotly as plotly
 df = pd.read_csv("data/ufo.csv")
 
 ## Selector labels and values
-type_labels = ["Count", "Duration", "Shape", "Date","WordCloud"]
-type_values = ["count", "duration", "shape", "date","wordcloud"]
+type_labels = ["Count", "Duration", "Shape", "Date", "Word cloud"]
+type_values = ["count", "duration", "shape", "date", "wordcloud"]
 
 ## Text to display
 md_text = '''With this dashboard, you can visualize some insights about UFO sightings. Check out the [dataset](https://www.kaggle.com/NUFORC/ufo-sightings) on Kaggle. \n
-This dataset contains around 80 000 and we ask ourselves what are the best conditions to observe UFO signs?\n'''
+You can filter the data based on the country and selct the graph you want to see.'''
+
 
 # Functions for WordCloud
 def tokenise(text):
-    return [word.lower() for word in word_tokenize(text) if word not in stop_words and word.isalpha() ]
+    return [word.lower() for word in word_tokenize(text) if word not in stop_words and word.isalpha()]
+
+
 df['comments_token'] = df['comments'].apply(str).map(tokenise)
 
 ## Application layout
@@ -121,16 +124,16 @@ def update_graph(graph_type, select_values):
                         'sep', 'oct', 'nov', 'dec']
     day_comments = dff.groupby('day')['comments'].count()
 
-    # WordCloud
+    # Word cloud
     df_comments = dff.comments_token.tolist()
     count_C = Counter(x for l in df_comments for x in l)
     comments_count = dict(count_C)
     comments_nb = pd.Series(comments_count)
     comments_nb.sort_values(ascending=False, inplace=True)
     # take most important words
-    size_half = int(comments_nb.size/70)
+    size_half = int(comments_nb.size / 70)
     comments_nb = comments_nb[:size_half]
-    #comments_nb = comments_nb[comments_nb.values > 900]
+
     max_min = (comments_nb.iloc[1] - comments_nb.iloc[-1])
     min = comments_nb.iloc[-1]
 
@@ -167,24 +170,23 @@ def update_graph(graph_type, select_values):
     else:
         # center and reduce
         comments_nb = comments_nb.apply(lambda x: int((x - min) / (max_min) * 30))
-        comments_nb = comments_nb[comments_nb > 0] #drop words of weight 0
+        comments_nb = comments_nb[comments_nb > 0]  # drop words of weight 0
         words = comments_nb.index
         colors = [plotly.colors.DEFAULT_PLOTLY_COLORS[random.randrange(1, 10)] for i in range(comments_nb.size)]
         weights = comments_nb.values
-        data = go.Scatter(x=[random.random() for i in range(comments_nb.size)],
-                          y=[random.random() for i in range(comments_nb.size)],
+        data = go.Scatter(x=[random.random() for _ in range(comments_nb.size)],
+                          y=[random.random() for _ in range(comments_nb.size)],
                           mode='text',
                           text=words,
                           marker={'opacity': 0.3},
                           textfont={'size': weights,
                                     'color': colors})
-        #
+
         layout = go.Layout({'xaxis': {'showgrid': False, 'showticklabels': False, 'zeroline': False},
                             'yaxis': {'showgrid': False, 'showticklabels': False, 'zeroline': False},
-                            'title' : "WordCloud on comments",
+                            'title': "WordCloud on comments",
                             })
         fig2 = go.Figure(data=[data], layout=layout)
-
 
     return [fig1, fig2]
 
