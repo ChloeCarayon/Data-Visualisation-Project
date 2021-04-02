@@ -20,19 +20,42 @@ stop_words = set(stopwords.words('english'))
 from collections import Counter
 import random
 import plotly as plotly
+import plotly.figure_factory as ff
 
 
 ## Load dataset
 df = pd.read_csv("data/ufo.csv")
 
 ## Selector labels and values
-type_labels = ["Count", "Duration", "Shape", "Date", "Word cloud"]
-type_values = ["count", "duration", "shape", "date", "wordcloud"]
+type_labels = ["Count", "Duration", "Shape", "Word cloud"]
+type_values = ["count", "duration", "shape", "wordcloud"]
 
 ## Text to display
-md_text = '''With this dashboard, you can visualize some insights about UFO sightings. Check out the [dataset](https://www.kaggle.com/NUFORC/ufo-sightings) on Kaggle. \n
-You can filter the data based on the country and selct the graph you want to see.'''
+md_text = '''With this dashboard, you can visualize some insights about UFO sightings. Check out the [dataset](https://www.kaggle.com/NUFORC/ufo-sightings) on Kaggle.\n
+You can filter the data based on the country and select the graph you want to see.'''
 
+
+df['datetime'] = pd.to_datetime(df['datetime'])
+df['hour'] = df['datetime'].dt.hour
+
+## Date
+month_comments = df.groupby('month')['comments'].count()
+new_index_months = ['jan', 'feb', 'mar', 'apr',
+                    'may', 'jun', 'jul', 'aug',
+                    'sep', 'oct', 'nov', 'dec']
+day_comments = df.groupby('day')['comments'].count()
+
+hour_comments = df.groupby('hour')['comments'].count()
+
+df["season"] = pd.cut(x=df['month'], bins=[0, 5, 7, 10, 12], labels=["winter","spring","summer","fall"])
+df["hemisphere"] = pd.cut(x=df['latitude'], bins=[-100, 0, 100], labels=["Southern Hemisphere","Northern Hemisphere"])
+
+norSeason = df[df['hemisphere'] == "Northern Hemisphere"]["season"]
+souSeason = df[df['hemisphere'] == "Southern Hemisphere"]["season"]
+#norSeason = norSeason.value_counts() / len(norSeason) * 100
+#souSeason = souSeason.value_counts() / len(souSeason) * 100
+
+dataset_figure = ff.create_table(df[:15].drop(['comments', 'year', 'month','day','hour', 'duration_cut','season', 'hemisphere'], axis=1))
 
 # Functions for WordCloud
 def tokenise(text):
@@ -41,23 +64,59 @@ def tokenise(text):
 
 df['comments_token'] = df['comments'].apply(str).map(tokenise)
 
+external_stylesheets = ['style.css']
+
 ## Application layout
-app = dash.Dash()
+app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 app.layout = html.Div([
     html.H1("UFO Sightings: What are the best conditions to observe UFO signs?"),
     html.Div([
         dcc.Markdown(md_text)
     ]),
-    html.Div([
+    dcc.Tabs(id='tabs', value='tab0', children=[
+        dcc.Tab(label='Dataset of UFO sign', value='tab0'),
+        dcc.Tab(label='Where and how most UFO appear ? ', value='tab1'),
+        dcc.Tab(label='Is there a popular time where UFO appear ? ', value='tab2'),
+    ]),
+    html.Div(id='tabs-example-content'),
+
+
+
+], style={'font-family': 'Garamond'})
+
+
+@app.callback(Output('tabs-example-content', 'children'),
+              Input('tabs', 'value'))
+def render_content(tab):
+    if tab == 'tab0':
+        return tab0content()
+    elif tab == 'tab1':
+        return tab1content()
+    elif tab == 'tab2':
+        return tab2content()
+
+def tab0content():
+    return( html.Div([
+        html.H2(children='Preprocessed Dataset', style={
+            'textAlign': 'left',
+            'color': '#516D90'
+        }),
+        dcc.Graph(
+            id='dataset',
+            figure= dataset_figure
+        ),]))
+
+def tab1content():
+    return(
+        html.Div([
         html.H2(children='Map', style={
             'textAlign': 'left',
             'color': '#516D90'
         }),
         dcc.Graph(id='map'),
     ], style={'width': '49%', 'display': 'inline-block'}),  # display map on the left half
-
-    html.Div([
+        html.Div([
         html.H2(children='Graphs', style={
             'textAlign': 'left',
             'color': '#516D90'
@@ -84,18 +143,50 @@ app.layout = html.Div([
             value="us",
             multi=True
         )
-    ], style={'width': '49%', 'padding': '0px 20px 20px 20px'})  # display countries selector on the left half
+    ], style={'width': '49%', 'padding': '0px 20px 20px 20px'})  # display countries selector on the left half)
+    )
 
-], style={'font-family': 'Garamond'})
+def tab2content():
+    fig = make_subplots(rows=2, cols=1, subplot_titles=("Repartition by hour", "Repartition by day"))
+        # day and month subplots
 
+    fig.add_trace(
+        go.Bar(x=hour_comments.index, y=hour_comments, name="hour"),
+        row=1, col=1
+    )
 
-## Application callback
+    fig.add_trace(
+        go.Bar(x=day_comments.index, y=day_comments, name="days"),
+        row=2, col=1
+    )
+
+    #fig1 = px.histogram(df, x="season", color="hemisphere")
+
+    fig1 = go.Figure()
+    fig1.add_trace(
+       go.Histogram( x=souSeason, histnorm='percent', name='Southern Hemisphere'))
+
+    fig1.add_trace(
+        go.Histogram( x=norSeason, histnorm='percent', name='Northern Hemisphere'))
+
+    fig1.update_layout(
+        title_text="Season and Hemisphere UFO signs in percent", xaxis_title_text='Season', yaxis_title_text='Percent', bargap=0.2, bargroupgap=0.1 )
+
+    return(
+        html.Div([
+        dcc.Graph(id='Days and hours', figure=fig),
+    ], style={'width': '49%', 'display': 'inline-block'}),
+        html.Div([
+        dcc.Graph(id="Seasons and Hemisphere", figure=fig1)
+    ], style={'width': '49%', 'float': 'right', 'display': 'inline-block'}),
+    )
+
 @app.callback(
     Output("map", "figure"),
     Output("graph", "figure"),
     Input("type", "value"),
-    Input("select", "value")
-)
+    Input("select", "value"))
+
 def update_graph(graph_type, select_values):
     # Filter observations by country
     dff = df
@@ -117,12 +208,6 @@ def update_graph(graph_type, select_values):
     form_count = dff.groupby('form')['comments'].count()
     form_count = form_count[form_count >= 10]
 
-    ## Date
-    month_comments = dff.groupby('month')['comments'].count()
-    new_index_months = ['jan', 'feb', 'mar', 'apr',
-                        'may', 'jun', 'jul', 'aug',
-                        'sep', 'oct', 'nov', 'dec']
-    day_comments = dff.groupby('day')['comments'].count()
 
     # Word cloud
     df_comments = dff.comments_token.tolist()
@@ -155,18 +240,6 @@ def update_graph(graph_type, select_values):
     elif graph_type == "shape":
         fig2 = px.pie(values=form_count, names=form_count.index,
                       title="Proportion of ufo shapes")
-    elif graph_type == "date":
-        fig2 = make_subplots(rows=2, cols=1, subplot_titles=("Repartition by day", "Repartition by month"))
-        # day and month subplots
-        fig2.add_trace(
-            go.Bar(x=day_comments.index, y=day_comments, name="days"),
-            row=1, col=1
-        )
-
-        fig2.add_trace(
-            go.Bar(x=new_index_months, y=month_comments, name="months"),
-            row=2, col=1
-        )
     else:
         # center and reduce
         comments_nb = comments_nb.apply(lambda x: int((x - min) / (max_min) * 30))
