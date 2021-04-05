@@ -52,11 +52,8 @@ def tokenise(text):
 
 df['comments_token'] = df['comments'].apply(str).map(tokenise)
 
-
-external_stylesheets = ['style.css']
-
 ## Application layout
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+app = dash.Dash(__name__)
 
 app.layout = html.Div([
     html.H1("UFO Sightings: What are the best conditions to observe UFO signs?"),
@@ -64,11 +61,11 @@ app.layout = html.Div([
         dcc.Markdown(md_text)
     ]),
     dcc.Tabs(id='tabs', value='tab0', children=[
-        dcc.Tab(label='Dataset of UFO sign', value='tab0'),
-        dcc.Tab(label='Where and how most UFO appear ? ', value='tab1'),
-        dcc.Tab(label='Is there a popular time where UFO appear ? ', value='tab2'),
-    ]),
-    html.Div(id='tabs_content'),
+        dcc.Tab(label='Dataset', value='tab0'),
+        dcc.Tab(label='Where and how most UFO appear?', value='tab1'),
+        dcc.Tab(label='Is there a popular time where UFO appear?', value='tab2'),
+    ], style={"box-shadow": "5px 5px 5px grey"}),
+    html.Div(id='tabs_content')
 
 ], style={'font-family': 'Garamond'})
 
@@ -85,7 +82,7 @@ def render_content(tab):
 
 
 def tab0content():
-    return( html.Div([
+    return(html.Div([
         html.H2(children='Preprocessed Dataset', style={
             'textAlign': 'left',
             'color': '#516D90'
@@ -271,7 +268,7 @@ def update_graph_hemisphere(select_values):
         row=2, col=1)
 
     fig.add_trace(
-        go.Bar(x=month_comments.index, y=month_comments, name="month"),
+        go.Bar(x=new_index_months, y=month_comments, name="month"),
         row=3, col=1)
     fig.update_layout(height=600)
 
