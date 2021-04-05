@@ -5,22 +5,24 @@
 # CARAYON - TAILLIEU
 # ------------------
 
+import pandas as pd
+import random
+from collections import Counter
+
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
+
+import plotly as plotly
 import plotly.express as px
 import plotly.graph_objects as go
+import plotly.figure_factory as ff
 from plotly.subplots import make_subplots
-import pandas as pd
 
 from nltk import word_tokenize
 from nltk.corpus import stopwords
 stop_words = set(stopwords.words('english'))
-from collections import Counter
-import random
-import plotly as plotly
-import plotly.figure_factory as ff
 
 
 ## Load dataset
@@ -34,7 +36,6 @@ type_values = ["count", "duration", "shape", "wordcloud"]
 md_text = '''With this dashboard, you can visualize some insights about UFO sightings. Check out the [dataset](https://www.kaggle.com/NUFORC/ufo-sightings) on Kaggle.\n
 You can filter the data based on the country and select the graph you want to see.'''
 
-
 ## Date
 month_comments = df.groupby('month')['comments'].count()
 new_index_months = ['jan', 'feb', 'mar', 'apr',
@@ -44,11 +45,14 @@ new_index_months = ['jan', 'feb', 'mar', 'apr',
 norSeason = df[df['hemisphere'] == "Northern Hemisphere"]["season"]
 souSeason = df[df['hemisphere'] == "Southern Hemisphere"]["season"]
 
-dataset_figure = ff.create_table(df[:15].drop(['comments', 'year', 'month','day','hour', 'duration_cut','season', 'hemisphere'], axis=1))
+dataset_figure = ff.create_table(df[:15].drop(['comments', 'year', 'month', 'day', 'hour',
+                                               'duration_cut', 'season', 'hemisphere'], axis=1))
+
 
 # Functions for WordCloud
 def tokenise(text):
     return [word.lower() for word in word_tokenize(text) if word not in stop_words and word.isalpha()]
+
 
 df['comments_token'] = df['comments'].apply(str).map(tokenise)
 
@@ -62,11 +66,10 @@ app.layout = html.Div([
     ]),
     dcc.Tabs(id='tabs', value='tab0', children=[
         dcc.Tab(label='Dataset', value='tab0'),
-        dcc.Tab(label='Where and how most UFO appear?', value='tab1'),
-        dcc.Tab(label='Is there a popular time where UFO appear?', value='tab2'),
+        dcc.Tab(label='Where and how do most UFOs appear?', value='tab1'),
+        dcc.Tab(label='Is there a specific time when UFOs appear?', value='tab2'),
     ], style={"box-shadow": "5px 5px 5px grey"}),
     html.Div(id='tabs_content')
-
 ], style={'font-family': 'Garamond'})
 
 
@@ -82,61 +85,92 @@ def render_content(tab):
 
 
 def tab0content():
-    return(html.Div([
+    return html.Div([
         html.H2(children='Preprocessed Dataset', style={
             'textAlign': 'left',
             'color': '#516D90'
         }),
         dcc.Graph(
             id='dataset',
-            figure= dataset_figure
-        )]))
+            figure=dataset_figure
+        )])
+
 
 def tab1content():
-    return(
+    return html.Div([
         html.Div([
-        html.H2(children='Map', style={
-            'textAlign': 'left',
-            'color': '#516D90'
-        }),
-        dcc.Graph(id='map'),
-    ], style={'width': '49%', 'display': 'inline-block'}),  # display map on the left half
-        html.Div([
-        html.H2(children='Graphs', style={
-            'textAlign': 'left',
-            'color': '#516D90'
-        }),
-        # graph selector
-        dcc.Dropdown(
-            id='type',
-            options=[{'label': i, 'value': j} for i, j in zip(type_labels, type_values)],
-            value='count'
-        ),
-        dcc.Graph(id="graph")
-    ], style={'width': '49%', 'float': 'right', 'display': 'inline-block'}),  # display graph on the right half
+            html.H2(children='Map', style={
+                'textAlign': 'left',
+                'color': '#516D90'
+            }),
+            dcc.Graph(id='map'),
+        ], style={'width': '49%', 'display': 'inline-block'}),  # display map on the left half
 
-    html.Div([
-        # Countries selector
-        dcc.Dropdown(
-            id='select',
-            options=[
-                {"label": "United States", "value": "us"},
-                {"label": "Canada", "value": "ca"},
-                {"label": "United Kingdom", "value": "gb"},
-                {"label": "Other countries", "value": "other"}
-            ],
-            value="us",
-            multi=True
-        )
-    ], style={'width': '49%', 'padding': '0px 20px 20px 20px'})  # display countries selector on the left half)
-    )
+        html.Div([
+            html.H2(children='Graphs', style={
+                'textAlign': 'left',
+                'color': '#516D90'
+            }),
+            # graph selector
+            dcc.Dropdown(
+                id='type',
+                options=[{'label': i, 'value': j} for i, j in zip(type_labels, type_values)],
+                value='count'
+            ),
+            dcc.Graph(id="graph")
+        ], style={'width': '49%', 'float': 'right', 'display': 'inline-block'}),  # display graph on the right half
+
+        html.Div([
+            # Countries selector
+            dcc.Dropdown(
+                id='select',
+                options=[
+                    {"label": "United States", "value": "us"},
+                    {"label": "Canada", "value": "ca"},
+                    {"label": "United Kingdom", "value": "gb"},
+                    {"label": "Other countries", "value": "other"}
+                ],
+                value="us",
+                multi=True
+            )
+        ], style={'width': '49%', 'padding': '0px 20px 20px 20px'})  # display countries selector on the left half)
+    ])
+
+
+def tab2content():
+    fig1 = go.Figure()
+    fig1.add_trace(go.Histogram(x=souSeason, histnorm='percent', name='Southern Hemisphere'))
+    fig1.add_trace(go.Histogram(x=norSeason, histnorm='percent', name='Northern Hemisphere'))
+    fig1.update_layout(title_text="Proportion of UFO sightings by season and hemisphere",
+                       xaxis_title_text='Season', yaxis_title_text='Percent',
+                       bargap=0.2, bargroupgap=0.1)
+
+    return html.Div([
+        html.Div([
+            dcc.RadioItems(
+                id='radio',
+                options=[{'label': 'Northern Hemisphere', 'value': 'north'},
+                         {'label': 'Southern Hemisphere', 'value': 'south'}],
+                value='north',
+                labelStyle={'display': 'inline-block'}
+            ),
+        ], style={'width': '49%', 'float': 'left', 'padding': '40px 0px 0px 40px'}),
+
+        html.Div([
+            dcc.Graph(id='datesTimes')
+        ], style={'width': '49%', 'float': 'left'}),
+
+        html.Div([
+            dcc.Graph(id="SeasonsHemisp", figure=fig1)
+        ], style={'width': '49%', 'float': 'right', 'display': 'inline-block', 'padding': '100px 0px 0px 0px'})
+    ])
+
 
 @app.callback(
     Output("map", "figure"),
     Output("graph", "figure"),
     Input("type", "value"),
     Input("select", "value"))
-
 def update_graph(graph_type, select_values):
     # Filter observations by country
     dff = df
@@ -158,16 +192,13 @@ def update_graph(graph_type, select_values):
     form_count = dff.groupby('form')['comments'].count()
     form_count = form_count[form_count >= 10]
 
-
     # Word cloud
     df_comments = dff.comments_token.tolist()
-    count_C = Counter(x for l in df_comments for x in l)
-    comments_count = dict(count_C)
-    comments_nb = pd.Series(comments_count)
+    count_C = Counter(x for line in df_comments for x in line)
+    comments_nb = pd.Series(dict(count_C))
     comments_nb.sort_values(ascending=False, inplace=True)
     # take most important words
-    size_half = int(comments_nb.size / 70)
-    comments_nb = comments_nb[:size_half]
+    comments_nb = comments_nb[:100]
 
     max_min = (comments_nb.iloc[1] - comments_nb.iloc[-1])
     min = comments_nb.iloc[-1]
@@ -207,46 +238,15 @@ def update_graph(graph_type, select_values):
 
         layout = go.Layout({'xaxis': {'showgrid': False, 'showticklabels': False, 'zeroline': False},
                             'yaxis': {'showgrid': False, 'showticklabels': False, 'zeroline': False},
-                            'title': "WordCloud on comments",
-                            })
+                            'title': "WordCloud on comments"})
         fig2 = go.Figure(data=[data], layout=layout)
 
     return [fig1, fig2]
 
 
-def tab2content():
-    fig1 = go.Figure()
-    fig1.add_trace(
-       go.Histogram( x=souSeason, histnorm='percent', name='Southern Hemisphere'))
-    fig1.add_trace(
-        go.Histogram( x=norSeason, histnorm='percent', name='Northern Hemisphere'))
-    fig1.update_layout(
-        title_text="Season and Hemisphere UFO signs in percent", xaxis_title_text='Season', yaxis_title_text='Percent', bargap=0.2, bargroupgap=0.1 )
-
-    return(
-        html.Div([
-            dcc.RadioItems(
-                id='radio',
-                options=[{'label': 'Northern Hemisphere', 'value': 'north'},
-                         {'label': 'Southern Hemisphere', 'value': 'south'}, ],
-                value='north',
-                labelStyle={'display': 'inline-block'}
-            ),
-        ], style={'width': '49%', 'float': 'left', 'padding': '40px 0px 0px 40px'}),
-        html.Div([
-            dcc.Graph(id='datesTimes'),
-        ], style={'width': '49%', 'float': 'left'}),
-
-        html.Div([
-        dcc.Graph(id="SeasonsHemisp", figure=fig1)
-        ], style={'width': '49%', 'float': 'right', 'display': 'inline-block',  'padding': '100px 0px 0px 0px'}),
-    )
-
-
 @app.callback(
     Output("datesTimes", "figure"),
     Input("radio", "value"))
-
 def update_graph_hemisphere(select_values):
     dff = df
     if "north" not in select_values:
@@ -258,7 +258,7 @@ def update_graph_hemisphere(select_values):
     hour_comments = dff.groupby('hour')['comments'].count()
     month_comments = dff.groupby('month')['comments'].count()
 
-    fig = make_subplots(rows=3, cols=1, subplot_titles=("Repartition by hour", "Repartition by day", "Repartition by month" ))
+    fig = make_subplots(rows=3, cols=1, subplot_titles=("Repartition by hour", "Repartition by day", "Repartition by month"))
     fig.add_trace(
         go.Bar(x=hour_comments.index, y=hour_comments, name="hour"),
         row=1, col=1)
