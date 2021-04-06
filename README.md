@@ -1,19 +1,21 @@
 # Data visualisation project
 
-Project at EFREI in Data Visualization lecture
+Project at EFREI in Data Visualization lecture by Chloé CARAYON and Victor TAILLIEU.
 
-## Useful links
 
-- https://www.kaggle.com/parulpandey/a-guide-to-handling-missing-values-in-python
-- https://pypi.org/project/badfish/
-- https://pypi.org/project/bar-chart-race/
-- https://plotly.com/python/range-slider/
-- https://plotly.com/python/multiple-transforms/
-- https://plotly.com/python/choropleth-maps/
-- https://plotly.com/python/bubble-maps/
-- https://plotly.com/python/sunburst-charts/
-- https://plotly.com/python/filled-area-plots/
-- https://plotly.com/python/treemaps/
+## Project Objective
 
-## Ideas
-- Automate data download and preprocessing
+With this dashboard, you can visualize some insights about UFO sightings. 
+Check out the [dataset](https://www.kaggle.com/NUFORC/ufo-sightings) on Kaggle.
+
+
+## Project Structure
+
+This project is divided in two parts: 
+- Preprocessing 
+- Dashboard 
+
+Use ```preprocessing.py``` to preprocess the original dataset ```scrubbed.csv```.
+It creates the  ```ufo.csv```, but we already computed it as it takes hours to preprocess the 80 000 rows.
+
+Run ```python dashboard.py ``` and visit http://127.0.0.1:8050/ in your web browser to see the dashboard. 
