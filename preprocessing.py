@@ -23,12 +23,9 @@ from nltk.corpus import stopwords
 nltk.download("stopwords")
 nltk.download('punkt')
 
-from google.colab import drive
-drive.mount('/content/drive')
-
 """## Load data"""
 
-df = pd.read_csv("/content/drive/MyDrive/Data_visualisation/scrubbed.csv")
+df = pd.read_csv("data/scrubbed.csv")
 
 df
 
@@ -155,4 +152,4 @@ df["hemisphere"] = pd.cut(x=df['latitude'], bins=[-100, 0, 100], labels=["Southe
 
 """## Save preprocessed dataset"""
 
-df.to_csv('/content/drive/MyDrive/Data_visualisation/ufo.csv', index=False)
+df.to_csv('data/ufo.csv', index=False)
