@@ -276,4 +276,4 @@ def update_graph_hemisphere(select_values):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server()
